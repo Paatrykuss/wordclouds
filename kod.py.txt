@@ -1,0 +1,81 @@
+import os
+import math
+from collections import Counter
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+
+# wczytanie książki
+with open("alice.txt", "r", encoding="utf-8") as f:
+    text = f.read()
+
+# podział na rozdziały
+chapters = text.split("CHAPTER")
+
+documents = []
+
+for ch in chapters:
+    words = ch.lower().split()
+    clean_words = []
+
+    for w in words:
+        w = w.strip(".,!?;:\"()[]")
+        if len(w) > 2:
+            clean_words.append(w)
+
+    documents.append(clean_words)
+
+# TF
+tf = []
+for doc in documents:
+    count = Counter(doc)
+    tf.append(count)
+
+# IDF
+all_words = set()
+
+for doc in documents:
+    for w in doc:
+        all_words.add(w)
+
+idf = {}
+
+N = len(documents)
+
+for word in all_words:
+    docs_with_word = 0
+
+    for doc in documents:
+        if word in doc:
+            docs_with_word += 1
+
+    idf[word] = math.log(N / (1 + docs_with_word))
+
+# TF-IDF
+tfidf = []
+
+for doc in tf:
+    scores = {}
+
+    for word, count in doc.items():
+        scores[word] = count * idf.get(word, 0)
+
+    tfidf.append(scores)
+
+# chmury słów dla rozdziałów
+os.makedirs("wordclouds", exist_ok=True)
+
+for i, doc in enumerate(documents):
+
+    text_for_cloud = " ".join(doc)
+
+    wc = WordCloud(width=800, height=400, background_color="white").generate(text_for_cloud)
+
+    plt.figure()
+    plt.imshow(wc)
+    plt.axis("off")
+    plt.title("Chapter " + str(i))
+
+    plt.savefig(f"wordclouds/chapter_{i}.png")
+    plt.close()
+
+print("Gotowe")
